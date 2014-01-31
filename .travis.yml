@@ -5,6 +5,7 @@ php:
 env:
  - DB=MYSQL CORE_RELEASE=3.2
  - DB=PGSQL CORE_RELEASE=3.2
+ - DB=SQLITE3 CORE_RELEASE=3.2
 
 matrix:
     allow_failures:

@@ -66,11 +66,11 @@ class GridFieldSortableRowsAutoSortTest extends SapphireTest {
 }
 
 class GridFieldAction_SortOrder_Player extends DataObject implements TestOnly {
-	static $db = array(
+	private static $db = array(
 		'Name' => 'Varchar',
 		'SortOrder' => 'Int'
 	);
 	
-	static $default_sort='SortOrder';
+	private static $default_sort='SortOrder';
 }
 ?>
