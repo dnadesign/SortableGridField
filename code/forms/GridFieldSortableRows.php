@@ -7,14 +7,14 @@
 class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionProvider, GridField_DataManipulator {
 	protected $sortColumn;
 	protected $append_to_top=false;
-	
+
 	/**
 	 * @param String $sortColumn Column that should be used to update the sort information
 	 */
 	public function __construct($sortColumn) {
 		$this->sortColumn = $sortColumn;
 	}
-	
+
 	/**
 	 * Returns a map where the keys are fragment names and the values are pieces of HTML to add to these fragments.
 	 * @param GridField $gridField Grid Field Reference
@@ -26,18 +26,18 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 		if(class_exists('UnsavedRelationList') && $dataList instanceof UnsavedRelationList) {
 			return array();
 		}
-		
+
 		$state = $gridField->State->GridFieldSortableRows;
 		if(!is_bool($state->sortableToggle)) {
 			$state->sortableToggle = false;
 		}
-		
+
 		//Ensure user can edit
 		if(!singleton($gridField->getModelClass())->canEdit()){
 			return array();
 		}
-		
-		
+
+
 		//Sort order toggle
 		$sortOrderToggle = GridField_FormAction::create(
 			$gridField,
@@ -46,8 +46,8 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 			'sortableRowsToggle',
 			null
 		)->addExtraClass('sortablerows-toggle');
-		
-		
+
+
 		$sortOrderSave = GridField_FormAction::create(
 			$gridField,
 			'sortablerows-savesort',
@@ -55,8 +55,8 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 			'saveGridRowSort',
 			null
 		)->addExtraClass('sortablerows-savesort');
-		
-		
+
+
 		//Sort to Page Action
 		$sortToPage = GridField_FormAction::create(
 			$gridField,
@@ -65,26 +65,26 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 			'sortToPage',
 			null
 		)->addExtraClass('sortablerows-sorttopage');
-		
-		
+
+
 		$data = array('SortableToggle' => $sortOrderToggle,
 					'SortOrderSave' => $sortOrderSave,
 					'SortToPage' => $sortToPage,
 					'Checked' => ($state->sortableToggle == true ? ' checked = "checked"':''));
-		
+
 		$forTemplate = new ArrayData($data);
-		
-		
+
+
 		//Inject Requirements
 		Requirements::css(SORTABLE_GRIDFIELD_BASE . '/css/GridFieldSortableRows.css');
 		Requirements::javascript(SORTABLE_GRIDFIELD_BASE . '/javascript/GridFieldSortableRows.js');
-		
-		
+
+
 		$args = array('Colspan' => count($gridField->getColumns()), 'ID' => $gridField->ID());
-		
+
 		return array('header' => $forTemplate->renderWith('GridFieldSortableRows', $args));
 	}
-	
+
 	/**
 	 * Manipulate the datalist as needed by this grid modifier.
 	 * @param GridField $gridField Grid Field Reference
@@ -94,22 +94,22 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 	public function getManipulatedData(GridField $gridField, SS_List $dataList) {
 		//Detect and correct items with a sort column value of 0 (push to bottom)
 		$this->fixSortColumn($gridField, $dataList);
-		
-		
+
+
 		$headerState = $gridField->State->GridFieldSortableHeader;
 		$state = $gridField->State->GridFieldSortableRows;
 		if ((!is_bool($state->sortableToggle) || $state->sortableToggle==false) && $headerState && !empty($headerState->SortColumn)) {
 			return $dataList->sort($this->sortColumn);
 		}
-		
+
 		if ($state->sortableToggle == true) {
 			$gridField->getConfig()->removeComponentsByType('GridFieldFilterHeader');
 			$gridField->getConfig()->removeComponentsByType('GridFieldSortableHeader');
 		}
-		
+
 		return $dataList->sort($this->sortColumn);
 	}
-	
+
 	/**
 	 * Sets if new records should be appended to the top or the bottom of the list
 	 * @param bool $value Boolean true to append to the top false to append to the bottom
@@ -119,7 +119,7 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 		$this->append_to_top=$value;
 		return $this;
 	}
-	
+
 	/**
 	 * Detects and corrects items with a sort column value of 0, by appending them to the bottom of the list
 	 * @param GridField $gridField Grid Field Reference
@@ -129,13 +129,13 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 		if(class_exists('UnsavedRelationList') && $dataList instanceof UnsavedRelationList) {
 			return;
 		}
-		
+
 		$list=clone $dataList;
 		$list=$list->alterDataQuery(function($query, SS_List $tmplist) {
 			$query->limit(array());
 			return $query;
 		});
-		
+
 		$many_many = ($list instanceof ManyManyList);
 		if (!$many_many) {
 			$sng=singleton($gridField->getModelClass());
@@ -146,23 +146,23 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 				}else {
 					user_error('Sort column '.$this->sortColumn.' must be an Int, column is of type '.$fieldType, E_USER_ERROR);
 				}
-				
+
 				exit;
 			}
 		}
-		
-		
+
+
 		$max = $list->Max($this->sortColumn);
 		$list=$list->filter($this->sortColumn, 0)->sort("Created,ID");
 		if($list->Count()>0) {
 			$owner = $gridField->Form->getRecord();
 			$sortColumn = $this->sortColumn;
 			$i = 1;
-			
+
 			if ($many_many) {
 				list($parentClass, $componentClass, $parentField, $componentField, $table) = $owner->many_many($gridField->getName());
 				$extraFields=$owner->many_many_extraFields($gridField->getName());
-				
+
 				if(!$extraFields || !array_key_exists($this->sortColumn, $extraFields) || !($extraFields[$this->sortColumn]=='Int' || is_subclass_of('Int', $extraFields[$this->sortColumn]))) {
 					user_error('Sort column '.$this->sortColumn.' must be an Int, column is of type '.$fieldType, E_USER_ERROR);
 					exit;
@@ -171,7 +171,7 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 				//Find table containing the sort column
 				$table=false;
 				$class=$gridField->getModelClass();
-				
+
 				$db = Config::inst()->get($class, "db", CONFIG::UNINHERITED);
 				if(!empty($db) && array_key_exists($sortColumn, $db)) {
 					$table=$class;
@@ -185,30 +185,30 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 						}
 					}
 				}
-				
+
 				if($table===false) {
 					user_error('Sort column '.$this->sortColumn.' could not be found in '.$gridField->getModelClass().'\'s ancestry', E_USER_ERROR);
 					exit;
 				}
-				
+
 				$baseDataClass=ClassInfo::baseDataClass($gridField->getModelClass());
 			}
-			
-			
+
+
 			//Start transaction if supported
 			if(DB::getConn()->supportsTransactions()) {
 				DB::getConn()->transactionStart();
 			}
-			
+
 			$idCondition=null;
 			if($this->append_to_top && !($list instanceof RelationList)) {
 				$idCondition='"ID" IN(\''.implode("','", $list->getIDList()).'\')';
 			}
-			
+
 			if($this->append_to_top) {
 				$topIncremented=array();
 			}
-			
+
 			foreach($list as $obj) {
 				if($many_many) {
 					if($this->append_to_top) {
@@ -217,11 +217,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 						$querySuffix = '" SET "' . $sortColumn . '" = "' . $sortColumn .'"+1'
 								. ' WHERE "' . $parentField . '" = ' . $owner->ID . (!empty($topIncremented) ? ' AND "' . $componentField . '" NOT IN(\''.implode('\',\'', $topIncremented).'\')':'');
 						DB::query($queryPrefix.$querySuffix);
-						if($obj->has_extension('Versioned')){
-							$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-							DB::query($queryPrefixLive.$querySuffix);
-						}
-
 						$topIncremented[]=$obj->ID;
 					}else {
 						$queryPrefix = 'UPDATE "' . $table;
@@ -229,10 +224,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 								. ' WHERE "' . $componentField . '" = ' . $obj->ID . ' AND "' . $parentField . '" = ' . $owner->ID;
 						//Append the last record to the bottom
 						DB::query($queryPrefix.$querySuffix);
-						if($obj->has_extension('Versioned')){
-							$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-							DB::query($queryPrefixLive.$querySuffix);
-						}
 					}
 				}else if($this->append_to_top) {
 					$queryPrefix = 'UPDATE "' . $table;
@@ -400,10 +391,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 				$querySuffix = '" SET "' . $sortColumn.'" = ' . (($sort + 1) + $pageOffset)
 						. ' WHERE "' . $componentField . '" = ' . $id . ' AND "' . $parentField . '" = ' . $owner->ID;
 				DB::query($queryPrefix.$querySuffix);
-				if($items->First()->has_extension('Versioned')){
-					$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-					DB::query($queryPrefixLive.$querySuffix);
-				}
 
 			} else {
 				$queryPrefix = 'UPDATE "' . $table;
@@ -508,10 +495,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 				$querySuffix = '" SET "' . $sortColumn.'" = ' . $sortPositions[0]
 						. ' WHERE "' . $componentField . '" = ' . $targetItem->ID . ' AND "' . $parentField . '" = ' . $owner->ID;
 				DB::query($queryPrefix.$querySuffix);
-				if($obj->has_extension('Versioned')){
-					$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-					DB::query($queryPrefixLive.$querySuffix);
-				}
 			} else {
 				$targetItem->$sortColumn = $sortPositions[0];
 				$targetItem->write();
@@ -530,10 +513,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 					$querySuffix = '" SET "' . $sortColumn.'" = ' . $sortPositions[$i]
 							. ' WHERE "' . $componentField . '" = ' . $obj->ID . ' AND "' . $parentField . '" = ' . $owner->ID;
 					DB::query($queryPrefix.$querySuffix);
-					if($obj->has_extension('Versioned')){
-						$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-						DB::query($queryPrefixLive.$querySuffix);
-					}
 				} else {
 					$obj->$sortColumn = $sortPositions[$i];
 					$obj->write();
@@ -547,10 +526,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 				$querySuffix = '" SET "' . $sortColumn.'" = ' . $sortPositions[count($sortPositions) - 1]
 						. ' WHERE "' . $componentField . '" = ' . $targetItem->ID . ' AND "' . $parentField . '" = ' . $owner->ID;
 				DB::query($queryPrefix.$querySuffix);
-				if($obj->has_extension('Versioned')){
-					$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-					DB::query($queryPrefixLive.$querySuffix);
-				}
 			} else {
 				$targetItem->$sortColumn = $sortPositions[count($sortPositions) - 1];
 				$targetItem->write();
@@ -569,10 +544,6 @@ class GridFieldSortableRows implements GridField_HTMLProvider, GridField_ActionP
 					$querySuffix = '" SET "' . $sortColumn.'" = ' . $sortPositions[$i]
 							. ' WHERE "' . $componentField . '" = ' . $obj->ID . ' AND "' . $parentField . '" = ' . $owner->ID;
 					DB::query($queryPrefix.$querySuffix);
-					if($obj->has_extension('Versioned')){
-						$queryPrefixLive = 'UPDATE "' . $table.'_Live';
-						DB::query($queryPrefixLive.$querySuffix);
-					}
 				} else {
 					$obj->$sortColumn = $sortPositions[$i];
 					$obj->write();
